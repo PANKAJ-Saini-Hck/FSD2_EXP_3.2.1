@@ -1,0 +1,63 @@
+# ── Maven ──────────────────────────────────────────────────────────────────
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# ── Maven Wrapper ──────────────────────────────────────────────────────────
+.mvn/wrapper/maven-wrapper.properties
+
+# ── Spring Boot ────────────────────────────────────────────────────────────
+HELP.md
+*.jar
+*.war
+*.ear
+
+# ── IDEs ───────────────────────────────────────────────────────────────────
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# Eclipse
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache
+bin/
+
+# VS Code
+.vscode/
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+
+# ── OS Files ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Logs ───────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Pact ───────────────────────────────────────────────────────────────────
+# Keep pact files if you want to commit them; ignore if using a Pact Broker
+# target/pacts/
+
+# ── Environment & Secrets ──────────────────────────────────────────────────
+.env
+*.env
+application-local.properties
+application-secret.properties

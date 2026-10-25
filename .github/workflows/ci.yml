@@ -1,0 +1,207 @@
+name: CI Pipeline – FSD2 Experiment 3.2.1
+
+# ── Triggers ────────────────────────────────────────────────────────────────
+on:
+  push:
+    branches: [ "main", "develop", "feature/**" ]
+  pull_request:
+    branches: [ "main", "develop" ]
+
+# ── Jobs ─────────────────────────────────────────────────────────────────────
+jobs:
+
+  # ── 1. Build & Unit + Integration Tests ─────────────────────────────────
+  unit-and-integration-tests:
+    name: "Unit & Integration Tests"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "📥 Checkout source"
+        uses: actions/checkout@v4
+
+      - name: "☕ Set up JDK 17"
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: "📦 Cache Maven dependencies"
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: "🔨 Build project (skip tests)"
+        run: mvn -B install -DskipTests --no-transfer-progress
+
+      - name: "✅ Run Unit Tests (product-service)"
+        run: >
+          mvn -B test
+          -pl product-service
+          -Dtest="unit/**"
+          --no-transfer-progress
+
+      - name: "🔗 Run Integration Tests (product-service MockMvc)"
+        run: >
+          mvn -B test
+          -pl product-service
+          -Dtest="integration/**"
+          --no-transfer-progress
+
+      - name: "📊 Upload Unit/Integration Test Reports"
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-integration-reports
+          path: |
+            product-service/target/surefire-reports/
+            order-service/target/surefire-reports/
+          retention-days: 7
+
+  # ── 2. Contract Tests (Pact) ─────────────────────────────────────────────
+  contract-tests:
+    name: "Contract Tests (Pact)"
+    runs-on: ubuntu-latest
+    needs: unit-and-integration-tests
+
+    steps:
+      - name: "📥 Checkout source"
+        uses: actions/checkout@v4
+
+      - name: "☕ Set up JDK 17"
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: "📦 Restore Maven cache"
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: "🔨 Build project (skip tests)"
+        run: mvn -B install -DskipTests --no-transfer-progress
+
+      - name: "📝 Run Pact Consumer Tests (order-service → generates pact files)"
+        run: >
+          mvn -B test
+          -pl order-service
+          -Dtest="contract/**"
+          --no-transfer-progress
+
+      - name: "🔎 Verify Pact files were generated"
+        run: |
+          ls -la order-service/target/pacts/ || true
+          test -n "$(ls -A order-service/target/pacts 2>/dev/null)"
+
+      - name: "📤 Upload generated Pact files"
+        uses: actions/upload-artifact@v4
+        with:
+          name: pact-files
+          path: order-service/target/pacts/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: "📥 Download Pact files for provider verification"
+        uses: actions/download-artifact@v4
+        with:
+          name: pact-files
+          path: product-service/target/pacts/
+
+      - name: "🔍 Run Pact Provider Verification Tests (product-service)"
+        run: >
+          mvn -B test
+          -pl product-service
+          -Dtest="contract/**"
+          --no-transfer-progress
+
+      - name: "🧾 Print failing test output"
+        if: failure()
+        run: |
+          for f in order-service/target/surefire-reports/*.txt product-service/target/surefire-reports/*.txt; do
+            [ -f "$f" ] && { echo "=== $f ==="; cat "$f"; }
+          done || true
+
+      - name: "📊 Upload Contract Test Reports"
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: contract-test-reports
+          path: |
+            product-service/target/surefire-reports/
+            order-service/target/surefire-reports/
+          retention-days: 7
+
+  # ── 3. Infrastructure Tests (Testcontainers) ─────────────────────────────
+  infrastructure-tests:
+    name: "Infrastructure Tests (Testcontainers)"
+    runs-on: ubuntu-latest
+    needs: unit-and-integration-tests
+
+    services:
+      # Docker-in-Docker is available by default on ubuntu-latest runners
+      docker:
+        image: docker:dind
+        options: --privileged
+
+    steps:
+      - name: "📥 Checkout source"
+        uses: actions/checkout@v4
+
+      - name: "☕ Set up JDK 17"
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: "📦 Restore Maven cache"
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: "🔨 Build project (skip tests)"
+        run: mvn -B install -DskipTests --no-transfer-progress
+
+      - name: "🐳 Run Testcontainers Infrastructure Tests"
+        run: >
+          mvn -B test
+          -pl product-service
+          -Dtest="testcontainers/**"
+          --no-transfer-progress
+
+      - name: "📊 Upload Testcontainers Test Reports"
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: testcontainers-reports
+          path: product-service/target/surefire-reports/
+          retention-days: 7
+
+  # ── 4. Final Summary ─────────────────────────────────────────────────────
+  ci-summary:
+    name: "CI Summary"
+    runs-on: ubuntu-latest
+    needs: [ unit-and-integration-tests, contract-tests, infrastructure-tests ]
+    if: always()
+
+    steps:
+      - name: "✅ All CI stages completed"
+        run: |
+          echo "=============================================="
+          echo "  FSD2 Experiment 3.2.1 – CI Pipeline Report"
+          echo "=============================================="
+          echo "  Unit & Integration Tests : ${{ needs.unit-and-integration-tests.result }}"
+          echo "  Contract Tests (Pact)    : ${{ needs.contract-tests.result }}"
+          echo "  Infrastructure Tests     : ${{ needs.infrastructure-tests.result }}"
+          echo "=============================================="
