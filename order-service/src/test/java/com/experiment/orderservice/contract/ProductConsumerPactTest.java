@@ -1,24 +1,26 @@
 package com.experiment.orderservice.contract;
 
-import au.com.dius.pact.consumer.MockServer;
-import au.com.dius.pact.consumer.dsl.LambdaDsl;
-import au.com.dius.pact.consumer.dsl.PactDslJsonBody;
-import au.com.dius.pact.consumer.dsl.PactDslWithProvider;
-import au.com.dius.pact.consumer.junit5.PactConsumerTestExt;
-import au.com.dius.pact.consumer.junit5.PactTestFor;
-import au.com.dius.pact.core.model.RequestResponsePact;
-import au.com.dius.pact.core.model.annotations.Pact;
-import com.experiment.orderservice.client.ProductClient;
-import com.experiment.orderservice.model.Product;
-import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.web.client.RestTemplate;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.web.client.RestTemplate;
+
+import com.experiment.orderservice.client.ProductClient;
+import com.experiment.orderservice.model.Product;
+
+import au.com.dius.pact.consumer.MockServer;
+import au.com.dius.pact.consumer.dsl.LambdaDsl;
+import au.com.dius.pact.consumer.dsl.PactDslWithProvider;
+import au.com.dius.pact.consumer.junit5.PactConsumerTestExt;
+import au.com.dius.pact.consumer.junit5.PactTestFor;
+import au.com.dius.pact.core.model.PactSpecVersion;
+import au.com.dius.pact.core.model.RequestResponsePact;
+import au.com.dius.pact.core.model.annotations.Pact;
 
 /**
  * ─────────────────────────────────────────────────────────────────
@@ -79,7 +81,7 @@ class ProductConsumerPactTest {
     }
 
     @Test
-    @PactTestFor(providerName = PROVIDER, pactMethod = "getAllProductsPact")
+    @PactTestFor(providerName = PROVIDER, pactMethod = "getAllProductsPact", pactVersion = PactSpecVersion.V3)
     @DisplayName("Consumer: GET /api/products should return a list of products")
     void testGetAllProducts(MockServer mockServer) {
         ProductClient client = buildClient(mockServer);
@@ -117,7 +119,7 @@ class ProductConsumerPactTest {
     }
 
     @Test
-    @PactTestFor(providerName = PROVIDER, pactMethod = "getProductByIdFoundPact")
+    @PactTestFor(providerName = PROVIDER, pactMethod = "getProductByIdFoundPact", pactVersion = PactSpecVersion.V3)
     @DisplayName("Consumer: GET /api/products/1 should return a product when it exists")
     void testGetProductByIdFound(MockServer mockServer) {
         ProductClient client = buildClient(mockServer);
@@ -146,7 +148,7 @@ class ProductConsumerPactTest {
     }
 
     @Test
-    @PactTestFor(providerName = PROVIDER, pactMethod = "getProductByIdNotFoundPact")
+    @PactTestFor(providerName = PROVIDER, pactMethod = "getProductByIdNotFoundPact", pactVersion = PactSpecVersion.V3)
     @DisplayName("Consumer: GET /api/products/9999 should return empty when not found")
     void testGetProductByIdNotFound(MockServer mockServer) {
         ProductClient client = buildClient(mockServer);
@@ -183,7 +185,7 @@ class ProductConsumerPactTest {
     }
 
     @Test
-    @PactTestFor(providerName = PROVIDER, pactMethod = "getProductsByCategoryPact")
+    @PactTestFor(providerName = PROVIDER, pactMethod = "getProductsByCategoryPact", pactVersion = PactSpecVersion.V3)
     @DisplayName("Consumer: GET /api/products/category/Electronics should return electronics")
     void testGetProductsByCategory(MockServer mockServer) {
         ProductClient client = buildClient(mockServer);
